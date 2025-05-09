@@ -397,24 +397,6 @@ class MLP(nn.Module):
         return x
 
 
-def rgb_to_xy(rgb):
-    """
-    将 RGB 值转换为 xy 色度坐标
-    :param rgb: RGB 值，形状为 (3,) 或 (n, 3)
-    :return: xy 色度坐标，形状为 (2,) 或 (n, 2)
-    """
-    if len(rgb.shape) == 1:
-        rgb = np.expand_dims(rgb, axis=0)
-    xy_list = []
-    for r, g, b in rgb:
-        srgb = sRGBColor(r, g, b)
-        xyz = convert_color(srgb, XYZColor)
-        X, Y, Z = xyz.get_value_tuple()
-        x = X / (X + Y + Z) if (X + Y + Z) != 0 else 0
-        y = Y / (X + Y + Z) if (X + Y + Z) != 0 else 0
-        xy_list.append([x, y])
-    return np.array(xy_list)
-
 # def BT2020rgb_to_xy(rgb):
 #     if len(rgb.shape) == 1:
 #         rgb = np.expand_dims(rgb, axis=0)

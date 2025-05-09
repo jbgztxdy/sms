@@ -16,17 +16,17 @@ plt.rcParams['axes.unicode_minus'] = False  # 用来正常显示负号
 ###########################################################
 
 # 定义4通道(RGBV)视频源的三基色坐标(CIE 1931坐标)
-SOURCE_RED = (0.708, 0.292)  # R通道
-SOURCE_GREEN = (0.170, 0.797)  # G通道
-SOURCE_BLUE = (0.131, 0.046)  # B通道
-SOURCE_VIOLET = (0.20, 0.10)  # V通道(假设为紫色)
+SOURCE_RED = (0.708, 0.292)
+SOURCE_GREEN = (0.170, 0.797)
+SOURCE_BLUE = (0.14, 0.046)
+SOURCE_VIOLET = (0.03, 0.6)  # V通道(假设为紫色)
 
 # 定义5通道(RGBCX)LED显示屏的三基色坐标
-DISPLAY_RED = (0.64, 0.33)  # R通道
-DISPLAY_GREEN = (0.30, 0.60)  # G通道
-DISPLAY_BLUE = (0.15, 0.06)  # B通道
-DISPLAY_CYAN = (0.22, 0.33)  # C通道(假设为青色)
-DISPLAY_YELLOW = (0.42, 0.51)  # X通道(假设为黄色)
+DISPLAY_RED = (0.6942, 0.3052)  # R通道
+DISPLAY_GREEN = (0.2368, 0.7281)  # G通道
+DISPLAY_BLUE = (0.1316, 0.0712)  # B通道
+DISPLAY_CYAN = (0.04, 0.4)  # C通道(假设为青色)
+DISPLAY_YELLOW = (0.1478, 0.7326)  # X通道(假设为黄色)
 
 ##########################################################
 # 此处的三基色坐标根据自己电脑设备的实际情况进行调整，但是一般情况下不需要调整，因为这个已经是标准的了
@@ -87,15 +87,15 @@ def plot_color_spaces_4to5():
     plt.plot(purple_line_x, purple_line_y, '-', color='purple', label='紫线')
 
     # 绘制源4通道RGBV色域
-    source_x = [SOURCE_RED[0], SOURCE_GREEN[0], SOURCE_BLUE[0], SOURCE_VIOLET[0], SOURCE_RED[0]]
-    source_y = [SOURCE_RED[1], SOURCE_GREEN[1], SOURCE_BLUE[1], SOURCE_VIOLET[1], SOURCE_RED[1]]
+    source_x = [SOURCE_RED[0], SOURCE_GREEN[0], SOURCE_VIOLET[0], SOURCE_BLUE[0], SOURCE_RED[0]]
+    source_y = [SOURCE_RED[1], SOURCE_GREEN[1], SOURCE_VIOLET[1], SOURCE_BLUE[1], SOURCE_RED[1]]
     plt.plot(source_x, source_y, '-', color='blue', linewidth=2, label='4通道源RGBV')
     source_poly = Polygon(np.column_stack([source_x[:4], source_y[:4]]), alpha=0.2, color='blue')
     plt.gca().add_patch(source_poly)
 
     # 绘制显示屏5通道RGBCX色域
-    display_x = [DISPLAY_RED[0], DISPLAY_GREEN[0], DISPLAY_BLUE[0], DISPLAY_CYAN[0], DISPLAY_YELLOW[0], DISPLAY_RED[0]]
-    display_y = [DISPLAY_RED[1], DISPLAY_GREEN[1], DISPLAY_BLUE[1], DISPLAY_CYAN[1], DISPLAY_YELLOW[1], DISPLAY_RED[1]]
+    display_x = [DISPLAY_RED[0], DISPLAY_GREEN[0], DISPLAY_YELLOW[0], DISPLAY_CYAN[0], DISPLAY_BLUE[0], DISPLAY_RED[0]]
+    display_y = [DISPLAY_RED[1], DISPLAY_GREEN[1], DISPLAY_YELLOW[1], DISPLAY_CYAN[1], DISPLAY_BLUE[1], DISPLAY_RED[1]]
     plt.plot(display_x, display_y, '-', color='red', linewidth=2, label='5通道显示RGBCX')
     display_poly = Polygon(np.column_stack([display_x[:5], display_y[:5]]), alpha=0.2, color='red')
     plt.gca().add_patch(display_poly)
