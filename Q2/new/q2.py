@@ -15,16 +15,18 @@ from tqdm import tqdm
 plt.rcParams['font.sans-serif'] = ['SimHei']  # 用来正常显示中文标签
 plt.rcParams['axes.unicode_minus'] = False  # 用来正常显示负号
 
-# 定义BT2020和显示屏RGB的三基色坐标(CIE 1931坐标)
-# 参考文献[4]中提到的BT2020标准
-BT2020_RED = (0.708, 0.292)
-BT2020_GREEN = (0.170, 0.797)
-BT2020_BLUE = (0.131, 0.046)
+# 视频源色域
+SOURCE_RED = (0.708, 0.292)
+SOURCE_GREEN = (0.170, 0.797)
+SOURCE_BLUE = (0.14, 0.046)
+SOURCE_VIOLET = (0.03, 0.6)  # V通道(假设为紫色)
 
-# 假设显示屏的RGB三基色(实际上需要根据具体显示器校准获得)
-DISPLAY_RED = (0.6946, 0.3047)
-DISPLAY_GREEN = (0.2612, 0.7076)
-DISPLAY_BLUE = (0.1418, 0.0417)
+# 定义5通道(RGBCX)LED显示屏的三基色坐标
+DISPLAY_RED = (0.6942, 0.3052)  # R通道
+DISPLAY_GREEN = (0.2368, 0.7281)  # G通道
+DISPLAY_BLUE = (0.1316, 0.0712)  # B通道
+DISPLAY_CYAN = (0.04, 0.4)  # C通道(假设为青色)
+DISPLAY_YELLOW = (0.1478, 0.7326)  # X通道(假设为黄色)
 
 
 def plot_color_spaces():
@@ -87,8 +89,8 @@ def plot_color_spaces():
                 [DISPLAY_RED[1], DISPLAY_GREEN[1], DISPLAY_BLUE[1]],
                 color='red', s=50)
 
-    # 添加白点
-    plt.scatter([0.3127, 0.3127], [0.3290, 0.3290], color='black', s=50, label='D65白点')
+    # # 添加白点
+    # plt.scatter([0.3127, 0.3127], [0.3290, 0.3290], color='black', s=50, label='D65白点')
 
     plt.xlabel('x')
     plt.ylabel('y')

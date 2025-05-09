@@ -81,8 +81,8 @@ def plot_color_spaces():
                 [DISPLAY_RED[1], DISPLAY_GREEN[1], DISPLAY_BLUE[1]],
                 color='red', s=50)
 
-    # # 添加白点
-    # plt.scatter([0.3127, 0.3127], [0.3290, 0.3290], color='black', s=50, label='D65白点')
+    # 添加白点
+    plt.scatter([0.3127, 0.3127], [0.3290, 0.3290], color='black', s=50, label='D65白点')
 
     plt.xlabel('x')
     plt.ylabel('y')
