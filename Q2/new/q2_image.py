@@ -267,7 +267,9 @@ def visualize_4to5_mapping():
         (0.3, 0.2, 0.3, 0.2),  # 复杂混合4
     ]
 
-    # 进行颜色转换
+    nn_mapped_colors = [convert_SOURCE_to_display(np.array(color)) for color in test_colors]
+    
+    # 其他映射方法
     mapped_colors = [optimize_4to5_conversion(np.array(color)) for color in test_colors]
     alt_mapped_colors = [alternative_4to5_conversion(np.array(color)) for color in test_colors]
 
@@ -291,12 +293,12 @@ def visualize_4to5_mapping():
     # 应用伽马校正(为了正确显示)
     source_rgb_values = [gamma_correction(rgb) for rgb in source_rgb_values]
 
-    # 创建显示图
-    fig, axes = plt.subplots(len(test_colors), 3, figsize=(15, 2 * len(test_colors)))
+    # 创建显示图 - 修改为4列以包含神经网络映射
+    fig, axes = plt.subplots(len(test_colors), 4, figsize=(20, 2 * len(test_colors)))
     fig.suptitle('4通道RGBV源到5通道RGBCX显示的映射对比', fontsize=16)
 
-    for i, (original_rgbv, mapped_rgbcx, alt_mapped_rgbcx, display_rgb) in enumerate(
-            zip(test_colors, mapped_colors, alt_mapped_colors, source_rgb_values)):
+    for i, (original_rgbv, nn_rgbcx, mapped_rgbcx, alt_mapped_rgbcx, display_rgb) in enumerate(
+            zip(test_colors, nn_mapped_colors, mapped_colors, alt_mapped_colors, source_rgb_values)):
         # 显示原始4通道颜色(用RGB近似显示)
         axes[i, 0].add_patch(plt.Rectangle((0, 0), 1, 1, color=display_rgb))
         axes[i, 0].set_xlim(0, 1)
@@ -306,15 +308,20 @@ def visualize_4to5_mapping():
         axes[i, 0].set_title(
             f'源RGBV ({original_rgbv[0]:.1f}, {original_rgbv[1]:.1f}, {original_rgbv[2]:.1f}, {original_rgbv[3]:.1f})')
 
-        # 显示欧氏距离优化映射的5通道颜色
-        axes[i, 1].bar(['R', 'G', 'B', 'C', 'X'], mapped_rgbcx, color=['red', 'green', 'blue', 'cyan', 'yellow'])
+        # 显示神经网络映射的5通道颜色
+        axes[i, 1].bar(['R', 'G', 'B', 'C', 'X'], nn_rgbcx, color=['red', 'green', 'blue', 'cyan', 'yellow'])
         axes[i, 1].set_ylim(0, 1)
-        axes[i, 1].set_title('欧氏距离优化映射')
+        axes[i, 1].set_title('神经网络映射')
+
+        # 显示欧氏距离优化映射的5通道颜色
+        axes[i, 2].bar(['R', 'G', 'B', 'C', 'X'], mapped_rgbcx, color=['red', 'green', 'blue', 'cyan', 'yellow'])
+        axes[i, 2].set_ylim(0, 1)
+        axes[i, 2].set_title('欧氏距离优化映射')
 
         # 显示线性规划映射的5通道颜色
-        axes[i, 2].bar(['R', 'G', 'B', 'C', 'X'], alt_mapped_rgbcx, color=['red', 'green', 'blue', 'cyan', 'yellow'])
-        axes[i, 2].set_ylim(0, 1)
-        axes[i, 2].set_title('线性规划映射')
+        axes[i, 3].bar(['R', 'G', 'B', 'C', 'X'], alt_mapped_rgbcx, color=['red', 'green', 'blue', 'cyan', 'yellow'])
+        axes[i, 3].set_ylim(0, 1)
+        axes[i, 3].set_title('线性规划映射')
 
     plt.tight_layout(rect=[0, 0, 1, 0.95])
     return plt.gcf()
@@ -327,18 +334,24 @@ def visualize_conversion_accuracy():
     n_samples = 100
     test_colors = np.random.random((n_samples, 4))
 
-    # 进行两种方法的颜色转换
+    nn_mapped_colors = [convert_SOURCE_to_display(color) for color in test_colors]
     mapped_colors = [optimize_4to5_conversion(color) for color in test_colors]
     alt_mapped_colors = [alternative_4to5_conversion(color) for color in test_colors]
 
     # 计算转换误差
     SOURCE_matrix, DISPLAY_matrix = compute_color_matrices()
 
+    errors_nn = []
     errors_opt = []
     errors_alt = []
 
     for i in range(n_samples):
         source_xyz = np.dot(SOURCE_matrix, test_colors[i])
+
+        # 神经网络方法
+        nn_mapped_xyz = np.dot(DISPLAY_matrix, nn_mapped_colors[i])
+        error_nn = np.sqrt(np.sum((source_xyz - nn_mapped_xyz) ** 2))
+        errors_nn.append(error_nn)
 
         # 欧氏距离优化方法
         mapped_xyz = np.dot(DISPLAY_matrix, mapped_colors[i])
@@ -350,17 +363,24 @@ def visualize_conversion_accuracy():
         error_alt = np.sqrt(np.sum((source_xyz - alt_mapped_xyz) ** 2))
         errors_alt.append(error_alt)
 
-    # 绘制误差分布
-    plt.figure(figsize=(10, 6))
+    # 绘制误差分布 - 修改为3列
+    plt.figure(figsize=(15, 6))
 
-    plt.subplot(1, 2, 1)
+    plt.subplot(1, 3, 1)
+    plt.hist(errors_nn, bins=20, alpha=0.7, color='purple')
+    plt.axvline(np.mean(errors_nn), color='red', linestyle='dashed', linewidth=2)
+    plt.title(f'神经网络方法误差分布\n平均误差: {np.mean(errors_nn):.4f}')
+    plt.xlabel('XYZ空间中的欧氏距离误差')
+    plt.ylabel('频数')
+
+    plt.subplot(1, 3, 2)
     plt.hist(errors_opt, bins=20, alpha=0.7, color='blue')
     plt.axvline(np.mean(errors_opt), color='red', linestyle='dashed', linewidth=2)
     plt.title(f'欧氏距离优化方法误差分布\n平均误差: {np.mean(errors_opt):.4f}')
     plt.xlabel('XYZ空间中的欧氏距离误差')
     plt.ylabel('频数')
 
-    plt.subplot(1, 2, 2)
+    plt.subplot(1, 3, 3)
     plt.hist(errors_alt, bins=20, alpha=0.7, color='green')
     plt.axvline(np.mean(errors_alt), color='red', linestyle='dashed', linewidth=2)
     plt.title(f'线性规划方法误差分布\n平均误差: {np.mean(errors_alt):.4f}')
@@ -533,7 +553,7 @@ def analyze_conversion_accuracy():
 
     for i, color in enumerate(test_colors):
         # 转换到5通道
-        display_rgbcx = optimize_4to5_conversion(color)
+        display_rgbcx = convert_SOURCE_to_display(color)
 
         # 计算原始颜色和目标颜色的XYZ值
         source_xyz = np.dot(SOURCE_matrix, color)
@@ -934,98 +954,11 @@ def generate_training_data(num_samples=10000):
 # dataset = TensorDataset(SOURCE_rgb_train)
 # dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
 
-# 初始化 MLP 模型并移动到 GPU
-model = MLP().to(device)
-
-criterion = ChromaticLoss()
-optimizer = optim.AdamW(model.parameters(), lr=1e-4, weight_decay=1e-5)
-scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min', patience=5)
-# 数据加载
-train_data = generate_training_data()
-dataloader = DataLoader(TensorDataset(train_data), 
-                             batch_size=256, shuffle=True, pin_memory=True)
-
-# 定义优化器为 SGD
-# optimizer = optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
-# optimizer = optim.Adam(model.parameters(), lr=0.001, weight_decay=0.0001)  # 添加 L2 正则化
-
-# 存储每个 epoch 的损失
-losses = []
-
-# criterion = nn.MSELoss()  # 这里使用均方误差损失函数，你也可以使用其他合适的损失函数
-
-# 训练模型
-num_epochs = 300
-for epoch in tqdm(range(num_epochs)):
-    epoch_loss = 0
-    for batch in dataloader:
-        source_rgb_batch = batch[0].to(device)  # 添加设备转移
-        outputs = model(source_rgb_batch)
-
-        # 计算输入和输出的 xy 值
-        source_xy = SOURCErgb_to_xy(source_rgb_batch)
-        output_xy = displayrgb_to_xy(outputs)
-
-        # 计算 CIEDE2000 色差
-        # 将xy转换为XYZ (假设Y=1)
-        source_XYZ = torch.stack([
-            source_xy[..., 0] * 1 / source_xy[..., 1],
-            torch.ones_like(source_xy[..., 0]),
-            (1 - source_xy[..., 0] - source_xy[..., 1]) * 1 / source_xy[..., 1]
-        ], dim=-1)
-        
-        output_XYZ = torch.stack([
-            output_xy[..., 0] * 1 / output_xy[..., 1],
-            torch.ones_like(output_xy[..., 0]),
-            (1 - output_xy[..., 0] - output_xy[..., 1]) * 1 / output_xy[..., 1]
-        ], dim=-1)
-        
-        # 将XYZ转换为Lab
-        source_Lab = XYZ_to_Lab(source_XYZ)
-        output_Lab = XYZ_to_Lab(output_XYZ)
-        
-        # 计算CIEDE2000色差
-        batch_loss = color_difference_torch(source_xy, output_xy)#criterion(source_rgb_batch,outputs)#delta_e_cie2000_torch(source_Lab, output_Lab).mean() #color_difference_torch(source_xy, output_xy)
-
-        optimizer.zero_grad()
-        batch_loss.backward()
-
-        # 检查是否有梯度更新
-        # with torch.no_grad():
-        #     has_grad = False
-        #     for name, param in model.named_parameters():
-        #         if param.grad is not None and torch.norm(param.grad) > 1e-8:
-        #             has_grad = True
-        #             print(f"参数 {name} 有梯度，范数: {torch.norm(param.grad):.6f}")
-            
-        #     if not has_grad:
-        #         print("警告：所有参数梯度为零！")
-    
-        optimizer.step()
-
-        epoch_loss += batch_loss.item()
-
-    epoch_loss = epoch_loss / len(dataloader)
-    losses.append(epoch_loss)
-
-    if (epoch + 1) % 10 == 0:
-        print(f'Epoch [{epoch + 1}/{num_epochs}], Loss: {epoch_loss:.4f}')
-
-# 保存模型参数
-torch.save(model.state_dict(), 'mlp_model.pth')
-print("模型参数已保存到 mlp_model.pth")
-
-# 绘制损失曲线
-import matplotlib.pyplot as plt
-plt.plot(range(1, num_epochs + 1), losses)
-plt.xlabel('Epoch')
-plt.ylabel('Loss')
-plt.title('Training Loss Curve')
-plt.savefig('loss_curve.png')
-print("损失曲线已保存为 loss_curve.png")
-
 # 定义颜色转换函数
 def convert_SOURCE_to_display(source_rgb):
+    # 初始化 MLP 模型并移动到 GPU
+    model = MLP().to(device)
+    model.load_state_dict(torch.load('mlp_model.pth', map_location=device))
     model.eval()
     
     # 将输入转换为2D张量 (添加batch维度)
@@ -1186,7 +1119,7 @@ def main():
     results = analyze_conversion_accuracy()
     
     # 将结果保存到txt文件
-    with open('analysis_results.txt', 'w', encoding='utf-8') as f:
+    with open('analysis_results_mlp.txt', 'w', encoding='utf-8') as f:
         f.write("色域分析结果:\n")
         f.write("=" * 50 + "\n")
         f.write(f"4通道源色域面积: {source_area:.4f}\n")
@@ -1220,7 +1153,7 @@ def main():
         f.write(f"最小色差(ΔE): {min_error:.4f}\n")
         f.write(f"色差标准差: {std_error:.4f}\n")
     
-    print("\n数值结果已保存到 analysis_results.txt")
+    print("\n数值结果已保存到 analysis_results_mlp.txt")
     
     # 绘制CIE 1931色彩空间和色域对比
     print("\n生成可视化图表...")
