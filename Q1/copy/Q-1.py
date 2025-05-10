@@ -153,13 +153,13 @@ def compute_primary_matrix():
     # 计算转换矩阵 (从BT2020到显示屏RGB)
     conversion_matrix = np.linalg.inv(DISPLAY_matrix) @ BT2020_matrix
 
-    print("\n原色矩阵分析:")
-    print("BT2020原色矩阵:")
-    print(BT2020_matrix)
-    print("\n显示屏RGB原色矩阵:")
-    print(DISPLAY_matrix)
-    print("\n转换矩阵 (BT2020 -> 显示屏RGB):")
-    print(conversion_matrix)
+    # print("\n原色矩阵分析:")
+    # print("BT2020原色矩阵:")
+    # print(BT2020_matrix)
+    # print("\n显示屏RGB原色矩阵:")
+    # print(DISPLAY_matrix)
+    # print("\n转换矩阵 (BT2020 -> 显示屏RGB):")
+    # print(conversion_matrix)
 
     return BT2020_matrix, DISPLAY_matrix, conversion_matrix
 
@@ -209,10 +209,10 @@ def optimize_conversion(bt2020_rgb):
     initial_diff = color_difference(bt2020_xyz, initial_xyz)
     final_diff = color_difference(bt2020_xyz, final_xyz)
     
-    print(f"\n颜色优化分析 (RGB={bt2020_rgb}):")
-    print(f"初始色差: {initial_diff:.6f}")
-    print(f"优化后色差: {final_diff:.6f}")
-    print(f"色差改善: {((initial_diff-final_diff)/initial_diff*100):.2f}%")
+    # print(f"\n颜色优化分析 (RGB={bt2020_rgb}):")
+    # print(f"初始色差: {initial_diff:.6f}")
+    # print(f"优化后色差: {final_diff:.6f}")
+    # print(f"色差改善: {((initial_diff-final_diff)/initial_diff*100):.2f}%")
 
     return np.clip(result.x, 0, 1)  # 确保结果在[0,1]范围内
 
