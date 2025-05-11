@@ -159,13 +159,13 @@ def compute_primary_matrix():
     # 计算转换矩阵 (从BT2020到显示屏RGB)
     conversion_matrix = np.linalg.inv(DISPLAY_matrix) @ BT2020_matrix
 
-    print("\n原色矩阵分析:")
-    print("BT2020原色矩阵:")
-    print(BT2020_matrix)
-    print("\n显示屏RGB原色矩阵:")
-    print(DISPLAY_matrix)
-    print("\n转换矩阵 (BT2020 -> 显示屏RGB):")
-    print(conversion_matrix)
+    # print("\n原色矩阵分析:")
+    # print("BT2020原色矩阵:")
+    # print(BT2020_matrix)
+    # print("\n显示屏RGB原色矩阵:")
+    # print(DISPLAY_matrix)
+    # print("\n转换矩阵 (BT2020 -> 显示屏RGB):")
+    # print(conversion_matrix)
 
     return BT2020_matrix, DISPLAY_matrix, conversion_matrix
 
@@ -221,6 +221,76 @@ def optimize_conversion(bt2020_rgb):
     print(f"色差改善: {((initial_diff-final_diff)/initial_diff*100):.2f}%")
 
     return np.clip(result.x, 0, 1)  # 确保结果在[0,1]范围内
+
+def analyze_conversion_accuracy():
+    """分析4通道到5通道转换的精度"""
+    # 创建测试颜色集
+    test_colors = [
+        np.array([1.0, 0.0, 0.0]),  # 纯R
+        np.array([0.0, 1.0, 0.0]),  # 纯G
+        np.array([0.0, 0.0, 1.0]),  # 纯B
+        np.array([0.5, 0.5, 0.0]),  # RG混合
+        np.array([0.5, 0.0, 0.5]),  # RB混合
+        np.array([0.0, 0.5, 0.5]),  # GB混合
+        np.array([0.0, 0.0, 0.5]),  # BV混合
+        np.array([0.33, 0.33, 0.33]),  # 均匀混合
+        np.array([0.5, 0.3, 0.2]),  # 复杂混合1
+        np.array([0.2, 0.4, 0.4]),  # 复杂混合2
+        np.array([0.1, 0.1, 0.8]),  # 复杂混合3
+        np.array([0.3, 0.2, 0.5]),  # 复杂混合4
+    ]
+
+    # 获取颜色矩阵
+    BT2020_matrix, DISPLAY_matrix, _ = compute_primary_matrix()
+
+    # 存储结果
+    results = []
+    total_error = 0
+    max_error = 0
+    min_error = float('inf')
+
+    print("\n转换精度分析结果：")
+    print("=" * 50)
+    print("颜色\t\t\t源RGBV\t\t\t目标rgb\t\t\t色差(ΔE)")
+    print("-" * 100)
+
+    for i, color in enumerate(test_colors):
+        # 转换到5通道
+        display_rgb = convert_bt2020_to_display(color)
+
+        # 计算原始颜色和目标颜色的XYZ值
+        BT2020_xyz = np.dot(BT2020_matrix, color)
+        display_xyz = np.dot(DISPLAY_matrix, display_rgb)
+
+        # 计算色差(ΔE)
+        error = np.sqrt(np.sum((BT2020_xyz - display_xyz) ** 2))
+        total_error += error
+        max_error = max(max_error, error)
+        min_error = min(min_error, error)
+
+        # 格式化输出
+        color_name = f"颜色{i+1}"
+        BT2020_str = f"({color[0]:.2f}, {color[1]:.2f}, {color[2]:.2f})"
+        target_str = f"({display_rgb[0]:.2f}, {display_rgb[1]:.2f}, {display_rgb[2]:.2f})"
+        print(f"{color_name}\t{BT2020_str}\t{target_str}\t{error:.4f}")
+
+        results.append({
+            'BT2020': color,
+            'target': display_rgb,
+            'error': error
+        })
+
+    # 计算统计信息
+    avg_error = total_error / len(test_colors)
+    
+    print("\n统计信息：")
+    print("=" * 50)
+    print(f"平均色差(ΔE): {avg_error:.4f}")
+    print(f"最大色差(ΔE): {max_error:.4f}")
+    print(f"最小色差(ΔE): {min_error:.4f}")
+    print(f"色差标准差: {np.std([r['error'] for r in results]):.4f}")
+
+    return results
 
 
 def visualize_color_mapping():
@@ -638,7 +708,7 @@ optimizer = optim.Adam(model.parameters(), lr=0.001)
 losses = []
 
 # 训练模型
-num_epochs = 100
+num_epochs = 200
 for epoch in tqdm(range(num_epochs)):
     epoch_loss = 0
     for batch in dataloader:
@@ -668,7 +738,7 @@ for epoch in tqdm(range(num_epochs)):
         output_Lab = XYZ_to_Lab(output_XYZ)
         
         # 计算CIEDE2000色差
-        batch_loss = delta_e_cie2000_torch(bt2020_Lab, output_Lab).mean()
+        batch_loss = color_difference_torch(bt2020_xy,output_xy)#delta_e_cie2000_torch(bt2020_Lab, output_Lab).mean()
         # batch_loss = 0
         # for i in range(len(bt2020_rgb_batch)):
         #     color1 = XYZColor(bt2020_xy[i, 0], bt2020_xy[i, 1], 1 - bt2020_xy[i, 0] - bt2020_xy[i, 1])
@@ -822,6 +892,39 @@ def main():
         f.write(f"色域覆盖率: {(display_area/bt2020_area*100):.2f}%\n")
 
     print("\n色彩空间转换完成！结果已保存到 color_conversion_results.txt")
+
+    # 分析转换精度
+    results = analyze_conversion_accuracy()
+    
+    # 将结果保存到txt文件
+    with open('accuracy_results_mlp.txt', 'w', encoding='utf-8') as f:
+        
+        f.write("颜色转换精度分析:\n")
+        f.write("=" * 50 + "\n")
+        f.write("颜色\t\t\t源RGBV\t\t\t目标rgb\t\t\t色差(ΔE)\n")
+        f.write("-" * 100 + "\n")
+        
+        for i, result in enumerate(results):
+            color = result['BT2020']
+            target = result['target']
+            error = result['error']
+            f.write(f"颜色{i+1}\t({color[0]:.2f}, {color[1]:.2f}, {color[2]:.2f})\t")
+            f.write(f"({target[0]:.2f}, {target[1]:.2f}, {target[2]:.2f})\t")
+            f.write(f"{error:.4f}\n")
+        
+        # 计算统计信息
+        errors = [r['error'] for r in results]
+        avg_error = sum(errors) / len(errors)
+        max_error = max(errors)
+        min_error = min(errors)
+        std_error = np.std(errors)
+        
+        f.write("\n统计信息:\n")
+        f.write("=" * 50 + "\n")
+        f.write(f"平均色差(ΔE): {avg_error:.4f}\n")
+        f.write(f"最大色差(ΔE): {max_error:.4f}\n")
+        f.write(f"最小色差(ΔE): {min_error:.4f}\n")
+        f.write(f"色差标准差: {std_error:.4f}\n")
 
     # 可视化色彩映射
     mapping_fig = visualize_color_mapping()
