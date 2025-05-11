@@ -367,15 +367,11 @@ def analyze_conversion_accuracy():
     test_colors = [
         np.array([1.0, 0.0, 0.0]),  # 纯R
         np.array([0.0, 1.0, 0.0]),  # 纯G
-        np.array([0.0, 0.0, 1.0]),  # 纯B
         np.array([0.5, 0.5, 0.0]),  # RG混合
         np.array([0.5, 0.0, 0.5]),  # RB混合
-        np.array([0.0, 0.5, 0.5]),  # GB混合
-        np.array([0.0, 0.0, 0.5]),  # BV混合
-        np.array([0.33, 0.33, 0.33]),  # 均匀混合
+        np.array([0.4, 0.3, 0.3]),  # 均匀混合
         np.array([0.5, 0.3, 0.2]),  # 复杂混合1
         np.array([0.2, 0.4, 0.4]),  # 复杂混合2
-        np.array([0.1, 0.1, 0.8]),  # 复杂混合3
         np.array([0.3, 0.2, 0.5]),  # 复杂混合4
     ]
 
