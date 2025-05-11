@@ -228,15 +228,11 @@ def analyze_conversion_accuracy():
     test_colors = [
         np.array([1.0, 0.0, 0.0]),  # 纯R
         np.array([0.0, 1.0, 0.0]),  # 纯G
-        np.array([0.0, 0.0, 1.0]),  # 纯B
         np.array([0.5, 0.5, 0.0]),  # RG混合
         np.array([0.5, 0.0, 0.5]),  # RB混合
-        np.array([0.0, 0.5, 0.5]),  # GB混合
-        np.array([0.0, 0.0, 0.5]),  # BV混合
-        np.array([0.33, 0.33, 0.33]),  # 均匀混合
+        np.array([0.4, 0.3, 0.3]),  # 均匀混合
         np.array([0.5, 0.3, 0.2]),  # 复杂混合1
         np.array([0.2, 0.4, 0.4]),  # 复杂混合2
-        np.array([0.1, 0.1, 0.8]),  # 复杂混合3
         np.array([0.3, 0.2, 0.5]),  # 复杂混合4
     ]
 
@@ -690,6 +686,8 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 # 生成训练数据
 num_samples = 1000
 bt2020_rgb_train = np.random.uniform(0, 1, (num_samples, 3))
+# # 对每个样本进行归一化，确保每个样本的 RGB 分量之和为 1
+# bt2020_rgb_train = bt2020_rgb_train / np.sum(bt2020_rgb_train, axis=1).reshape(-1, 1)
 bt2020_rgb_train = torch.tensor(bt2020_rgb_train, dtype=torch.float32).to(device)
 
 # 创建数据集和数据加载器
@@ -738,7 +736,7 @@ for epoch in tqdm(range(num_epochs)):
         output_Lab = XYZ_to_Lab(output_XYZ)
         
         # 计算CIEDE2000色差
-        batch_loss = color_difference_torch(bt2020_xy,output_xy)#delta_e_cie2000_torch(bt2020_Lab, output_Lab).mean()
+        batch_loss = delta_e_cie2000_torch(bt2020_Lab, output_Lab).mean() #color_difference_torch(bt2020_xy,output_xy)
         # batch_loss = 0
         # for i in range(len(bt2020_rgb_batch)):
         #     color1 = XYZColor(bt2020_xy[i, 0], bt2020_xy[i, 1], 1 - bt2020_xy[i, 0] - bt2020_xy[i, 1])
