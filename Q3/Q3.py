@@ -249,7 +249,7 @@ def main():
     )
 
     optim_corrected_red, optim_corrected_green, optim_corrected_blue = color_correction(
-        data, True, 0.01
+        data, True, 0.25
     )
 
     filename = "optim_correction_results.txt"
