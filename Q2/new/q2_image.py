@@ -648,31 +648,37 @@ class GamutProjection(nn.Module):
         # 保持5通道维度
         x = torch.mm(x, self.proj_matrix)  # [batch,5] x [5,5] → [batch,5]
         return torch.sigmoid(x)
-
+    
 class MLP(nn.Module):
-    def __init__(self, input_dim=4, output_dim=5, hidden_dim=512):
+    def __init__(self, input_dim=4, output_dim=5, hidden_dim=512, reduction=8):
         super().__init__()
-        # 输入编码层
+        
+        # 输入编码层（包含光谱注意力）
         self.encoder = nn.Sequential(
             nn.Linear(input_dim, hidden_dim),
             nn.LayerNorm(hidden_dim),
-            nn.GELU()
+            nn.GELU(),
+            ChromaticAttention(channels=hidden_dim, reduction=reduction)  # 添加注意力
         )
         
-        # 特征转换层
+        # 特征转换层（包含光谱注意力）
         self.transformer = nn.Sequential(
             nn.Linear(hidden_dim, hidden_dim),
             nn.GELU(),
+            ChromaticAttention(channels=hidden_dim, reduction=reduction),  # 添加注意力
             nn.Dropout(0.2)
         )
         
         # 输出解码层
         self.decoder = nn.Sequential(
-            nn.Linear(hidden_dim, output_dim)
+            nn.Linear(hidden_dim, hidden_dim//2),
+            nn.GELU(),
+            ChromaticAttention(channels=hidden_dim//2, reduction=reduction//2),  # 输出前注意力
+            nn.Linear(hidden_dim//2, output_dim)
         )
         
-        # 色域投影层（显示设备矩阵应为3x5）
-        self.gamut_layer = GamutProjection()  # 直接传入原始矩阵
+        # 色域投影层
+        self.gamut_layer = GamutProjection()
         
     def forward(self, x):
         # 输入标准化
@@ -681,14 +687,55 @@ class MLP(nn.Module):
         # 特征编码
         x = self.encoder(x)
         
-        # 特征变换
-        x = self.transformer(x) + x  # 残差连接
+        # 特征变换（带残差连接）
+        x = self.transformer(x) + x
         
-        # 解码输出（5通道）
+        # 解码输出
         x = self.decoder(x)
         
-        # 色域投影（保持5通道）
+        # 色域投影
         return self.gamut_layer(x).clamp(0, 1)
+
+# class MLP(nn.Module):
+#     def __init__(self, input_dim=4, output_dim=5, hidden_dim=512):
+#         super().__init__()
+#         # 输入编码层
+#         self.encoder = nn.Sequential(
+#             nn.Linear(input_dim, hidden_dim),
+#             nn.LayerNorm(hidden_dim),
+#             nn.GELU()
+#         )
+        
+#         # 特征转换层
+#         self.transformer = nn.Sequential(
+#             nn.Linear(hidden_dim, hidden_dim),
+#             nn.GELU(),
+#             nn.Dropout(0.2)
+#         )
+        
+#         # 输出解码层
+#         self.decoder = nn.Sequential(
+#             nn.Linear(hidden_dim, output_dim)
+#         )
+        
+#         # 色域投影层（显示设备矩阵应为3x5）
+#         self.gamut_layer = GamutProjection()  # 直接传入原始矩阵
+        
+#     def forward(self, x):
+#         # 输入标准化
+#         x = x.clamp(0, 1)
+        
+#         # 特征编码
+#         x = self.encoder(x)
+        
+#         # 特征变换
+#         x = self.transformer(x) + x  # 残差连接
+        
+#         # 解码输出（5通道）
+#         x = self.decoder(x)
+        
+#         # 色域投影（保持5通道）
+#         return self.gamut_layer(x).clamp(0, 1)
 
 class ChromaticLoss(nn.Module):
     """混合感知损失函数"""
@@ -958,7 +1005,7 @@ def generate_training_data(num_samples=10000):
 def convert_SOURCE_to_display(source_rgb):
     # 初始化 MLP 模型并移动到 GPU
     model = MLP().to(device)
-    model.load_state_dict(torch.load('mlp_model.pth', map_location=device))
+    model.load_state_dict(torch.load('mlp_model_attention.pth', map_location=device))
     model.eval()
     
     # 将输入转换为2D张量 (添加batch维度)
@@ -982,7 +1029,7 @@ def convert_SOURCE_to_display(source_rgb):
     display_rgb = np.clip(display_rgb, 0, 1)
     return display_rgb
 
-def test_mlp_model(rgb_values, model_path='mlp_model.pth'):
+def test_mlp_model(rgb_values, model_path='mlp_model_attention.pth'):
     """
     加载保存的模型参数并处理输入的 RGB 值。
     :param rgb_values: 输入的 RGB 值，形状为 (n, 3) 的 numpy 数组或列表
@@ -1119,7 +1166,7 @@ def main():
     results = analyze_conversion_accuracy()
     
     # 将结果保存到txt文件
-    with open('analysis_results_mlp.txt', 'w', encoding='utf-8') as f:
+    with open('analysis_results_attention.txt', 'w', encoding='utf-8') as f:
         f.write("色域分析结果:\n")
         f.write("=" * 50 + "\n")
         f.write(f"4通道源色域面积: {source_area:.4f}\n")
@@ -1168,7 +1215,7 @@ def main():
 
     # 可视化转换精度
     fig3 = visualize_conversion_accuracy()
-    fig3.savefig('conversion_accuracy.png')
+    fig3.savefig('conversion_accuracy_attention.png')
     plt.close(fig3)
 
     # 3D可视化色彩空间
@@ -1178,7 +1225,7 @@ def main():
 
     # 可视化色彩映射
     mapping_fig = visualize_color_mapping()
-    mapping_fig.savefig('color_mapping_mlp.png')
+    mapping_fig.savefig('color_mapping_mlp_attention.png')
 
     print("\n所有分析已完成，结果已保存为PNG文件。")
 
